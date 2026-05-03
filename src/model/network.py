@@ -15,6 +15,18 @@ class NetworkModel:
             return False, str(e)
         
     def check_port(self, host, port):
-        
+        sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(self.timeout)
+        try:
+            result=sock.connect_ex((host, int(port)))
+            if result==0:
+                return True
+            else:
+                return False
+        except Exception:
+            return False
+        finally:
+            sock.close()
+
         
 
