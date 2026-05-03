@@ -49,6 +49,19 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 cursor.close()
                 conn.close()
 
-
-        
+    def save_log(self, target, status, response_time):
+        conn=self.get_connection()
+        if conn:
+            try:
+                cursor=conn.cursor()
+                query="INSERT INTO network_logs (target, status, response_time) VALUES (%s, %s, %s)"
+                values = (target, status, response_time)
+                cursor.execute(query, values)
+                conn.commit()
+                print(f"Збережено в БД: {target} | {status} | {response_time}ms")
+            except Error as e:
+                print(f"Помилка запису в БД: {e}")
+            finally:
+                cursor.close()
+                conn.close()
 
