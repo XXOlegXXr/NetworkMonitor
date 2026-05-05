@@ -22,6 +22,7 @@ class DatabaseModel:
                 password=self.password,
                 database=self.database
             )
+            return connection
         except Error as e:
             print(f"Помилка з'єднання: {e}")
             return None
@@ -30,7 +31,7 @@ class DatabaseModel:
         if conn:
             try:
                 cursor=conn.cursor()
-                cursor.execute(f"CREATE TABLE IF NOT EXISTS {self.database}")
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {self.database}")
                 cursor.execute(f"USE {self.database}")
                 cursor.execute(
                     """
@@ -50,18 +51,74 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 conn.close()
 
     def save_log(self, target, status, response_time):
-        conn=self.get_connection()
+        print(" Пробую підключитися до бази...")
+        conn = self.get_connection()
+        
+        if not conn:
+            print("Не вдалося підключитися до бази! conn = None")
+            return None
+
+        try:
+            cursor = conn.cursor()
+            query = "INSERT INTO network_logs (target, status, response_time) VALUES (%s, %s, %s)"
+            values = (target, status, response_time)
+            
+            cursor.execute(query, values)
+            conn.commit()
+            new_id = cursor.lastrowid
+            print(f"Дані записано! Згенерований ID: {new_id}")
+            return new_id
+        except Exception as e:
+            print(f"Помилка SQL: {e}")
+            return None
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
+    
+    def get_all_logs(self):
+        conn = self.get_connection()
         if conn:
             try:
-                cursor=conn.cursor()
-                query="INSERT INTO network_logs (target, status, response_time) VALUES (%s, %s, %s)"
-                values = (target, status, response_time)
-                cursor.execute(query, values)
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, target, status, response_time FROM network_logs ORDER BY id DESC")
+                return cursor.fetchall()
+            except Exception as e:
+                print(f"Помилка завантаження історії: {e}")
+                return []
+            finally:
+                cursor.close()
+                conn.close()
+        return []
+
+
+    def delete_log(self, log_id):
+        #13
+        conn = self.get_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM network_logs WHERE id = %s", (log_id,))
                 conn.commit()
-                print(f"Збережено в БД: {target} | {status} | {response_time}ms")
             except Error as e:
-                print(f"Помилка запису в БД: {e}")
+                print(f"Помилка видалення з БД: {e}")
             finally:
                 cursor.close()
                 conn.close()
 
+    def clear_all_logs(self):
+        conn = self.get_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("TRUNCATE TABLE network_logs") 
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Помилка очищення БД: {e}")
+                return False
+            finally:
+                cursor.close()
+                conn.close()
+        return False   

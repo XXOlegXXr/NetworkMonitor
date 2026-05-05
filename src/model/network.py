@@ -1,5 +1,6 @@
 import socket
 from ping3 import ping
+import time
 
 class NetworkModel:
     def __init__(self):
@@ -15,16 +16,20 @@ class NetworkModel:
             return False, str(e)
         
     def check_port(self, host, port):
-        sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(self.timeout)
         try:
-            result=sock.connect_ex((host, int(port)))
-            if result==0:
-                return True
+            start_time = time.time()  
+            result = sock.connect_ex((host, int(port)))
+            end_time = time.time()    
+            
+            if result == 0:
+                response_time = round((end_time - start_time) * 1000, 2)
+                return True, response_time  
             else:
-                return False
+                return False, 0.0           
         except Exception:
-            return False
+            return False, 0.0              
         finally:
             sock.close()
 
